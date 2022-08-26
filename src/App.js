@@ -1,7 +1,7 @@
 import React,{useState} from 'react';
 import styled, {ThemeProvider} from 'styled-components/native';
 import theme from './theme';
-import { StatusBar,Alert } from 'react-native';
+import { StatusBar, Alert } from 'react-native';
 import Input from './components/Input';
 import Task from './components/Task';
 import {Dimensions} from 'react-native';
@@ -107,6 +107,7 @@ export default function App() {
     //setTasks({...tasks, ...newTaskObject}); //객체 병합 by 스프레드문법
     storeData('tasks', {...tasks, ...newTaskObject});  //로컬저장소에 저장
     setNewTask('');
+    refInput.current?.focus();
   };
   
   const _handleTextChange = text=>{
@@ -137,38 +138,37 @@ export default function App() {
     storeData('tasks', currentTasks);  //로컬저장소에 저장
   }
 
+  //완료항목 전체 삭제
+  const _delAllTask = ()=>{
+    
+    const deleteCompletedItems = ()=>{
+      const currentTasks = {...tasks};
+      const filteredTasks =
+        Object.fromEntries(Object.entries(currentTasks)
+                                .filter(task=>task[1].completed==false));
+      storeData('tasks',filteredTasks);
+    }
+
+    Alert.alert(
+      "삭제",           //경고창 제목
+      "완료항목 전체를 삭제하시겠습니까?",   //경고창 메세지
+      [
+        {
+          text: "예",
+          onPress: () => deleteCompletedItems(),
+        },
+        { text: "아니오", 
+          onPress: () => {} 
+        }
+      ]
+    );
+
+  };
+
   //입력필드에 포커스가 떠났을때
   const _onBlur = ()=>{
     setNewTask('');
   }
-
-  //완료항목 전체 삭제
-  const _allDeleteTask = () => {
-    const deltetAll = ()=> {
-      const currentTasks = {...tasks};   //객체 복사
-      const filteredTask = Object.fromEntries( //key,vale쌍의 List를 객체로 변환
-                            Object.entries(currentTasks) //객체 => 객체를 key,vale쌍의 List추출
-                                  .filter(task=>task[1].completed==false) //미완료작업만 추출
-                           );
-      storeData('tasks',filteredTask);
-    }
-
-    Alert.alert(
-      '삭제',
-      '완료항목 전체를 삭제하시겠습니까?',
-      [
-        {
-          text: "예",
-          onPress: () => deltetAll()
-        },
-        {
-          text: "아니오",
-          onPress: () => {}
-        },
-      ]
-    );
-  }
-
   const width = Dimensions.get('window').width;
 
   return !isReady ? (
@@ -206,7 +206,9 @@ export default function App() {
                             />)
           }
         </List>
-        <LineButton text='완료항목 전체삭제' onPressOut={_allDeleteTask}/>
+        <LineButton 
+          text='완료항목 전체삭제'
+          onPressOut={_delAllTask}/>
       </Container>
     </ThemeProvider>
   );
