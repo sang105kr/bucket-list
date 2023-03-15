@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { StatusBar, Dimensions, Alert } from 'react-native';
+import { StatusBar, Dimensions, Alert, Pressable, Text } from 'react-native';
 import styled, { ThemeProvider } from 'styled-components/native';
 import { theme } from './theme';
 import Input from './components/Input';
@@ -15,10 +15,11 @@ const Container = styled.SafeAreaView`
 `;
 
 const Title = styled.Text`
-  font-size: 40px;
+  font-size: 30px;
   font-weight: 600;
   color: ${({ theme }) => theme.main};
-  align-self: flex-start;
+  align-self: center;
+  letter-spacing: 10px;
   margin: 0px 20px; /* y축 x축 */
 `;
 
@@ -34,6 +35,7 @@ const AllItemDelBtn = ({ width, onPress, title }) => {
         backgroundColor: '#666',
         width: width - 40,
         margin: 5,
+        borderRadius: 10,
       }}
       onPress={onPress}
     >
@@ -54,6 +56,7 @@ const App = () => {
   const [newTask, setNewTask] = useState('');
 
   const [tasks, setTasks] = useState({});
+  const [completedCnt, setCompletedCnt] = useState(0);
   // {
   //   1: { id: '1', text: 'Hanbit', completed: false },
   //   2: { id: '2', text: 'React Native', completed: true },
@@ -62,6 +65,9 @@ const App = () => {
   // }
   const _saveTasks = async tasks => {
     try {
+      setCompletedCnt(
+        Object.values(tasks).filter(item => item.completed).length,
+      );
       await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
       setTasks(tasks);
     } catch (e) {
@@ -71,8 +77,12 @@ const App = () => {
 
   const _loadTasks = async () => {
     try {
-      const loadedTasks = await AsyncStorage.getItem('tasks');
-      setTasks(JSON.parse(loadedTasks) || {});
+      let loadedTasks = await AsyncStorage.getItem('tasks');
+      loadedTasks = JSON.parse(loadedTasks) || {};
+      setTasks(loadedTasks);
+      setCompletedCnt(
+        Object.values(loadedTasks).filter(item => item.completed).length,
+      );
     } catch (e) {
       console.error(e);
     }
@@ -159,6 +169,31 @@ const App = () => {
     setNewTask('');
   };
 
+  const _delAll = () => {
+    const currentTasks = { ...tasks };
+    if (Object.values(currentTasks).filter(item => item.completed).length < 1) {
+      Alert.alert('', '완료 항목이 없습니다.', [{ text: '확인' }]);
+      return;
+    }
+    Alert.alert(
+      '[주의]',
+      `완료항목이${completedCnt}건 있습니다.\n전체삭제 하시겠습니까?`,
+      [
+        { text: '아니오', onPress: () => {} },
+        {
+          text: '예',
+          onPress() {
+            const currentTasks = { ...tasks };
+            Object.keys(currentTasks)
+              .filter(key => currentTasks[key].completed)
+              .forEach(key => delete currentTasks[key]);
+            _saveTasks(currentTasks);
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Container onLayout={onLayoutRootView}>
@@ -166,10 +201,10 @@ const App = () => {
           barStyle="light-content"
           backgroundColor={theme.background}
         />
-        <Title>TODO List</Title>
+        <Title>버킷리스트</Title>
         <Input
           value={newTask}
-          placeholder="+ Add a Task"
+          placeholder="+ 항목추가"
           onChangeText={_handleTextChange} //수정시
           onSubmitEditing={_addTask} //완료버튼
           onBlur={_onBlur} //포커스 잃었을때
@@ -187,6 +222,11 @@ const App = () => {
               />
             ))}
         </List>
+        <AllItemDelBtn
+          onPress={_delAll}
+          title={`완료항목(${completedCnt})건 전체삭제`}
+          width={width}
+        />
       </Container>
     </ThemeProvider>
   );
